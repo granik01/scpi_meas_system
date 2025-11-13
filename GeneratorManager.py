@@ -51,15 +51,15 @@ class SDG800():
     def trig(self):
         self.generator.write("TRIG")
         
-    def setSignal(self, waveform="PULS", freq = 1000, amp = 0.1, offset = 0, t = 0.001, ncycles =1):
+    def setSignal(self, waveform="PULS", freq = 1000, amp = 2.0, offset = 0, t = 0.001, ncycles =1):
         self.generator.write(f"FUNC {waveform}")
         self.generator.write(f"FREQ {str(freq)}")
-        self.generator.write(f"PULS:WIDT {str(t)}")
+        #self.generator.write(f"PULS:WIDT {str(t)}")
         self.generator.write(f"VOLT {str(amp)}")
-        self.generator.write(f"VOLT:OFFS {str(offset)}")
+        #self.generator.write(f"VOLT:OFFS {str(offset)}")
         self.generator.write("BURS:STAT ON")
         self.generator.write(f"BURS:NCYC {str(ncycles)}")
-        self.generator.write("TRIG:EXT")
+        self.generator.write("TRIG:SOUR MAN")
     
     def setPeriodicSignal(self, waveform="SQUARE", freq = 1000, amp = 2.0, offset = 1.0):
         self.generator.write(f"FUNC {waveform}")
@@ -67,17 +67,21 @@ class SDG800():
         self.generator.write(f"VOLT {str(amp)}")
         self.generator.write(f"VOLT:OFFS {str(offset)}")
 
-if __name__ == "__main__":
+    def close(self):
+        self.generator.close()
+
+if __name__ == "__main__":  
 
     gen = SDG800()
     gen.getDeviceList()
     gen.connect()
+    gen.reset()
     # #gen.setSignal(freq = 13560000, amp = 0.1, modShape = "ARB", arbWfName = "HLO", modFreq = 1000, turnOn = False)
     gen.setSignal()
     # #gen.setSignal(freq = 13560000, amp = 0.1, modShape = None, turnOn = True)
     time.sleep(5)
-    
     gen.turnOn()
     gen.trig()
     time.sleep(5)
     gen.turnOff()
+    gen.close()
