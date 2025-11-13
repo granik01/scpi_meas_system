@@ -1,5 +1,4 @@
 import pyvisa # need pip install pyvisa and pyvisa-py
-import os
 import time
 
 class SDG800():
@@ -46,6 +45,23 @@ class SDG800():
         
     def setSignal(self, waveform="SQUARE", freq = 1000, amp = 0.1,
                   modShape = None, arbWfName = "", modFreq = 1000, modDepth = 100):
+
+
+*RST
+FUNC PULS
+FREQ 1000             # Частота 1 кГц
+PULS:WIDT 0.001       # Длительность импульса 1 мс
+VOLT 3.3
+VOLT:OFFS 0
+BURS:STAT ON
+BURS:NCYC 1
+TRIG:EXT              # Устанавливаем внешний триггер
+OUTP ON
+TRIG                  # Запускаем программно
+
+
+
+
         """ Set the SDG 830 to output the indicated signal
         
         @param waveform: Waveform of the base signal.
@@ -102,14 +118,6 @@ class SDG800():
                              + ", AMP," + str(amp) + ", OFST,0V, PHSE,0")
         time.sleep(sleepTime)
         
-        # Turn on AM modulation, with Frequency 1KHz, depth 100%, and Modulation
-        # wave/Shape = Arbitrary 
-        # Since the arbitrary waveform shape was selected before,
-        # it will default to that one
-        if (modShape != None) & (modShape != ""):
-            self.generator.write("C1:MDWV AM, STATE,ON, SRC,INT, DEPTH," + 
-                                 str(modDepth) + ", MDSP," + modShape +
-                                 ", FRQ," + str(modFreq))
 
 if __name__ == "__main__":
 
