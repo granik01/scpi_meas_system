@@ -52,15 +52,20 @@ class SDG800():
         self.generator.write("TRIG")
         
     def setSignal(self, waveform="PULS", freq = 1000, amp = 0.1, offset = 0, t = 0.001, ncycles =1):
-
         self.generator.write(f"FUNC {waveform}")
+        self.generator.write(f"FREQ {str(freq)}")
         self.generator.write(f"PULS:WIDT {str(t)}")
         self.generator.write(f"VOLT {str(amp)}")
         self.generator.write(f"VOLT:OFFS {str(offset)}")
         self.generator.write("BURS:STAT ON")
         self.generator.write(f"BURS:NCYC {str(ncycles)}")
         self.generator.write("TRIG:EXT")
-       
+    
+    def setPeriodicSignal(self, waveform="SQUARE", freq = 1000, amp = 2.0, offset = 1.0):
+        self.generator.write(f"FUNC {waveform}")
+        self.generator.write(f"FREQ {str(freq)}")
+        self.generator.write(f"VOLT {str(amp)}")
+        self.generator.write(f"VOLT:OFFS {str(offset)}")
 
 if __name__ == "__main__":
 
