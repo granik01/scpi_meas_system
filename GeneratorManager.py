@@ -22,6 +22,11 @@ class SDG800():
 
         return success
 
+    def reset(self):
+        self.generator.write_termination = '\n'
+        self.generator.read_termination = '\n'
+        self.generator.write('*RST')
+
     def requestID(self):
         """ Request the instrument's ID
         @precondition: device must be connected 
@@ -47,7 +52,6 @@ class SDG800():
                   modShape = None, arbWfName = "", modFreq = 1000, modDepth = 100):
 
 
-*RST
 FUNC PULS
 FREQ 1000             # Частота 1 кГц
 PULS:WIDT 0.001       # Длительность импульса 1 мс
@@ -58,7 +62,6 @@ BURS:NCYC 1
 TRIG:EXT              # Устанавливаем внешний триггер
 OUTP ON
 TRIG                  # Запускаем программно
-
 
 
 
