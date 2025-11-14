@@ -50,18 +50,29 @@ class SDG800():
 
     def trig(self):
         self.generator.write("TRIG")
-        
-    def setSignal(self, waveform="PULS", freq = 1000, amp = 2.0, offset = 0, t = 0.001, ncycles =1):
-        self.generator.write(f"FUNC {waveform}")
+
+    def setFreq(self,freq):
         self.generator.write(f"FREQ {str(freq)}")
-        #self.generator.write(f"PULS:WIDT {str(t)}")
+
+    def setPulsWidt(self,t):
+        self.generator.write(f"PULS:WIDT {str(t)}")
+
+    def setAmp(self,amp,offset):
         self.generator.write(f"VOLT {str(amp)}")
-        #self.generator.write(f"VOLT:OFFS {str(offset)}")
+        self.generator.write(f"VOLT:OFFS {str(offset)}")
+            
+    def setSignal(self, waveform="PULS", freq = 10000, amp = 5.0, offset = 0, t = 0.00000005, ncycles =1):
+        self.generator.write(f"FUNC {waveform}")
+        self.setFreq(freq)
+        self.setPulsWidt(t)
+        #self.generator.write("PULS:TRAN 0.000000005")
+        self.setAmp(amp,offset)
         self.generator.write("BURS:STAT ON")
         self.generator.write(f"BURS:NCYC {str(ncycles)}")
-        self.generator.write("TRIG:SOUR MAN")
+        self.generator.write("TRIG:SOUR BUS")
+        
     
-    def setPeriodicSignal(self, waveform="SQUARE", freq = 1000, amp = 2.0, offset = 1.0):
+    def setPeriodicSignal(self, waveform="SQUARE", freq = 10000, amp = 3.0, offset = 0):
         self.generator.write(f"FUNC {waveform}")
         self.generator.write(f"FREQ {str(freq)}")
         self.generator.write(f"VOLT {str(amp)}")
@@ -76,12 +87,15 @@ if __name__ == "__main__":
     gen.getDeviceList()
     gen.connect()
     gen.reset()
-    # #gen.setSignal(freq = 13560000, amp = 0.1, modShape = "ARB", arbWfName = "HLO", modFreq = 1000, turnOn = False)
     gen.setSignal()
-    # #gen.setSignal(freq = 13560000, amp = 0.1, modShape = None, turnOn = True)
-    time.sleep(5)
+    time.sleep(1)
     gen.turnOn()
     gen.trig()
-    time.sleep(5)
+    time.sleep(1)
     gen.turnOff()
+    # gen.setPeriodicSignal()
+    # time.sleep(1)
+    # gen.turnOn()
+    # time.sleep(10)
+    # gen.turnOff()
     gen.close()
