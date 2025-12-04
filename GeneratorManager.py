@@ -1,10 +1,11 @@
 import pyvisa # need pip install pyvisa and pyvisa-py
 import time
 
-class SDG800():
-    def __init__(self, name = ""):
-        self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+class SDG800:
+    def __init__(self, rm, name = ""):
+        #self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
         #self.rm = pyvisa.ResourceManager('@py')
+        self.rm = rm
         self.generator = None
 
     def connect(self, name = ""):
@@ -61,7 +62,7 @@ class SDG800():
         self.generator.write(f"VOLT {str(amp)}")
         self.generator.write(f"VOLT:OFFS {str(offset)}")
             
-    def setSignal(self, waveform="PULS", freq = 10000, amp = 5.0, offset = 0, t = 0.00000005, ncycles =1):
+    def setSignal(self, waveform="PULS", freq = 10000, amp = 3.0, offset = 0, t = 0.00000005, ncycles =1):
         self.generator.write(f"FUNC {waveform}")
         self.setFreq(freq)
         self.setPulsWidt(t)
