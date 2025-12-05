@@ -4,15 +4,25 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 import numpy as np
 from datetime import datetime
 import os
+from OSCManager import SDS1000CFL
+from GeneratorManager import SDG800
+import pyvisa
+import time
 
 class MeasurementApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Измерительная система")
         self.root.geometry("1200x700")
+        self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+        print(self.rm.list_resources())
+        self.osc = SDS1000CFL(self.rm)
+        self.gen = SDG800(self.rm)
+
         
         # Стиль ttkbootstrap
         self.style = tb.Style("darkly")
@@ -38,19 +48,19 @@ class MeasurementApp:
         gen_frame.pack(fill=tk.X, pady=(0, 10), ipadx=5, ipady=5)
         
         # Поле: Амплитуда импульса
-        self.create_labeled_entry(gen_frame, "Амплитуда имп., В:", "amplitude", "1.0")
+        self.create_labeled_entry(gen_frame, "Амплитуда имп., В:", "amplitude", "3")
         
         # Поле: Длительность импульса
-        self.create_labeled_entry(gen_frame, "Длительность имп., с:", "duration", "0.001")
+        self.create_labeled_entry(gen_frame, "Длительность имп., с:", "duration", "0.000001")
         
         # === Группа: Управление осциллографом ===
         osc_frame = tb.Labelframe(left_panel, text="Управление осциллографом", bootstyle=WARNING)
         osc_frame.pack(fill=tk.X, pady=(0, 10), ipadx=5, ipady=5)
         
         # Поля осциллографа
-        self.create_labeled_entry(osc_frame, "Шаг сетки по времени, нс:", "time_step", "10")
-        self.create_labeled_entry(osc_frame, "Сдвиг по времени, нс:", "time_shift", "0")
-        self.create_labeled_entry(osc_frame, "Шаг сетки по напряжению, В:", "voltage_step", "0.1")
+        self.create_labeled_entry(osc_frame, "Шаг сетки по времени, нс:", "time_step", "100")
+        self.create_labeled_entry(osc_frame, "Сдвиг по времени, нс:", "time_shift", "600")
+        self.create_labeled_entry(osc_frame, "Шаг сетки по напряжению, В:", "voltage_step", "2.0")
         
         # === Поля для сохранения данных ===
         save_frame = tk.Frame(left_panel)
@@ -98,12 +108,12 @@ class MeasurementApp:
     def create_plot(self, parent):
         """Создает область для графика matplotlib"""
         # Создаем фигуру matplotlib
-        self.fig, self.ax = plt.subplots(figsize=(8, 6), dpi=100)
-        self.ax.set_title("Осциллограмма сигнала")
+        self.fig = Figure(figsize=(8, 6), dpi=100)
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_title("Осциллограмма сигналов")
         self.ax.set_xlabel("Время, с")
         self.ax.set_ylabel("Напряжение, В")
-        self.ax.grid(True, alpha=0.3)
-        
+        self.ax.grid(True, linestyle='--', alpha=0.7)
         # Инициализируем пустой график
         self.line, = self.ax.plot([], [], 'b-', linewidth=2)
         
@@ -111,6 +121,7 @@ class MeasurementApp:
         self.canvas = FigureCanvasTkAgg(self.fig, parent)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
         
     def on_measurement(self):
         """Обработчик нажатия кнопки Измерение"""
@@ -151,21 +162,58 @@ class MeasurementApp:
         return params
     
     def simulate_measurement(self, params):
-        """Генерирует тестовые данные для демонстрации"""
-        # Создаем временную ось
-        t = np.linspace(0, params['duration'] * 3, 1000)
+        trig_level = 0.1 #В
+        puls_width = float(params['duration']) #c
+        puls_amp = float(params['amplitude']) #В
+        time_shift = float(params['time_shift']) #нс
+        time_div = float(params['time_step']) #нс
+        vdiv = float(params['voltage_step']) #В
         
-        # Создаем импульс
-        pulse_center = params['duration'] * 1.5
-        pulse_width = params['duration']
+        directory = params['directory'] 
+        filename = params['filename'] 
+
+        osc_connection = self.osc.connect()
+        if osc_connection: 
+            print("Connection with the Oscilloscope is successfully set!")
+            print(f'Oscilloscope ID is {self.osc.requestID()}')
         
-        # Гауссов импульс для демонстрации
-        signal = params['amplitude'] * np.exp(-((t - pulse_center) ** 2) / (2 * (pulse_width / 6) ** 2))
+        gen_connection = self.gen.connect()
+        if gen_connection: 
+            print("Connection with the Generator is successfully set!")
+
+        self.gen.reset()
+        self.osc.reset()
+
+        self.gen.setSignal(t=puls_width,amp=puls_amp)
+        time.sleep(1) 
         
-        # Добавляем шум
-        noise = 0.02 * params['amplitude'] * np.random.randn(len(t))
-        signal_with_noise = signal + noise
+         
+        self.osc.setup_oscilloscope_sds1000(vdiv=vdiv, tdiv=time_div, level=trig_level, time_shift=time_shift)
+        vdiv1,ofst1 = osc.getPLT_conditions(1)
+        vdiv2,ofst2 = osc.getPLT_conditions(2)
+        tdiv,sara = osc.getTIME_conditions()
+
+       
+        self.gen.turnOn()
+        self.gen.trig()
+        #time.sleep(1)
+        self.gen.turnOff()
+
+        #while osc.oscilloscope.query('INR?') != '1': pass
+     
+        volt_value2 = self.osc.getWFdata(2,vdiv2,ofst2)
+        volt_value1 = self.osc.getWFdata(1,vdiv1,ofst1)
         
+        time_value = self.osc.calcTIME_value(len(volt_value2),tdiv,sara)
+
+        print("Plotting..")
+        self.osc.plotData(time_value,volt_value1,volt_value2,tdiv,trig_level,time_shift,vdiv1,filename)
+        bmpfile = filename + ".bmp"
+        self.osc.getBMP("screen.bmp")
+
+        self.osc.close()
+        self.gen.close()
+                
         return {
             'time': t,
             'signal': signal_with_noise,
@@ -188,19 +236,20 @@ class MeasurementApp:
         self.ax.grid(True, alpha=0.3)
         self.ax.legend()
         
-        # Настраиваем сетку согласно параметрам
-        if params['time_step'] > 0:
-            self.ax.xaxis.set_major_locator(plt.MultipleLocator(params['time_step'] * 1e-9))
-        
-        if params['voltage_step'] > 0:
-            self.ax.yaxis.set_major_locator(plt.MultipleLocator(params['voltage_step']))
-        
-        # Применяем сдвиг по времени
-        if params['time_shift'] != 0:
-            current_xlim = self.ax.get_xlim()
-            self.ax.set_xlim(current_xlim[0] + params['time_shift'] * 1e-9,
-                           current_xlim[1] + params['time_shift'] * 1e-9)
-        
+        # # Настраиваем сетку согласно параметрам
+        # if params['time_step'] > 0:
+        #     self.ax.xaxis.set_major_locator(plt.MultipleLocator(params['time_step'] * 1e-9))
+        #
+        # if params['voltage_step'] > 0:
+        #     self.ax.yaxis.set_major_locator(plt.MultipleLocator(params['voltage_step']))
+        #
+        # # Применяем сдвиг по времени
+        # if params['time_shift'] != 0:
+        #     current_xlim = self.ax.get_xlim()
+        #     self.ax.set_xlim(current_xlim[0] + params['time_shift'] * 1e-9,
+        #                    current_xlim[1] + params['time_shift'] * 1e-9)
+
+
         # Перерисовываем график
         self.fig.tight_layout()
         self.canvas.draw()
