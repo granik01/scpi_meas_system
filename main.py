@@ -10,14 +10,13 @@ if __name__ == "__main__":
     osc = SDS1000CFL(rm)
     gen = SDG800(rm)
 
-    puls_width = 0.000001 #Гц
+    puls_width = 0.000001 #c
     puls_amp = 3 #В
     trig_level = 1 #В
     time_shift = 600 #нс
     time_div = 100 #нс
     vdiv = 2.0 #В
     filename = "data"
-
 
 
     osc_connection = osc.connect()
@@ -41,8 +40,7 @@ if __name__ == "__main__":
     vdiv2,ofst2 = osc.getPLT_conditions(2)
     tdiv,sara = osc.getTIME_conditions()
 
-
-    
+   
     gen.turnOn()
     gen.trig()
     #time.sleep(1)
