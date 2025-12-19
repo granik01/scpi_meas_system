@@ -12,7 +12,7 @@ if __name__ == "__main__":
     gen = SDG800(rm)
 
     puls_width = 0.0000006 #c
-    puls_amp = 1.0 #В
+    puls_amp = 3 #В
     trig_level = 0.1 #В
     time_shift = 600 #нс
     time_div = 100 #нс
