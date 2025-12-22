@@ -118,6 +118,9 @@ class SDS1000CFL:
     def getBMP(self, file_name):
         self.oscilloscope.write('SCDP')
         result_str = self.oscilloscope.read_raw()
+        return result_str
+
+    def saveBMP(self, result_str, file_name):
         f = open(file_name,'wb')
         f.write(result_str)
         f.flush()
@@ -254,7 +257,7 @@ if __name__ == "__main__":
     
     osc.setup_oscilloscope_sds1000()
 
-    osc.getBMP("screen.bmp")
+    bmp = osc.getBMP("screen.bmp")
     osc.getWFdata()
 
     osc.close()

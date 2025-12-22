@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import numpy as np
+import pandas as pd
 from datetime import datetime
 import os
 from OSCManager import SDS1000CFL
@@ -18,12 +19,11 @@ class MeasurementApp:
         self.root = root
         self.root.title("Измерительная система")
         self.root.geometry("1200x700")
-        self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
-        print(self.rm.list_resources())
-        self.osc = SDS1000CFL(self.rm)
-        self.gen = SDG800(self.rm)
-
-        
+        # self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+        # print(self.rm.list_resources())
+        # self.osc = SDS1000CFL(self.rm)
+        # self.gen = SDG800(self.rm)
+    
         # Стиль ttkbootstrap
         self.style = tb.Style("darkly")
         
@@ -111,8 +111,8 @@ class MeasurementApp:
         self.fig = Figure(figsize=(8, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_title("Осциллограмма сигналов")
-        self.ax.set_xlabel("Время, с")
-        self.ax.set_ylabel("Напряжение, В")
+        self.ax.set_xlabel("Время t, с")
+        self.ax.set_ylabel("Напряжение t, В")
         self.ax.grid(True, linestyle='--', alpha=0.7)
         # Инициализируем пустой график
         self.line, = self.ax.plot([], [], 'b-', linewidth=2)
@@ -137,10 +137,10 @@ class MeasurementApp:
             data = self.simulate_measurement(params)
             
             # Обновляем график
-            self.update_plot(data, params)
+            figure = self.update_plot(data, params)
             
             # Сохраняем данные
-            self.save_measurement(data, params)
+            self.save_measurement(data, params,figure)
             
             # Обновляем статус
             self.status_var.set(f"Измерение завершено: {datetime.now().strftime('%H:%M:%S')}")
@@ -165,103 +165,98 @@ class MeasurementApp:
         trig_level = 0.1 #В
         puls_width = float(params['duration']) #c
         puls_amp = float(params['amplitude']) #В
-        time_shift = float(params['time_shift']) #нс
+        time_shift = int(params['time_shift']) #нс
         time_div = float(params['time_step']) #нс
         vdiv = float(params['voltage_step']) #В
         
         directory = params['directory'] 
         filename = params['filename'] 
+        rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+        print(rm.list_resources())
+        osc = SDS1000CFL(rm)
+        gen = SDG800(rm)
 
-        osc_connection = self.osc.connect()
+        osc_connection = osc.connect()
         if osc_connection: 
             print("Connection with the Oscilloscope is successfully set!")
-            print(f'Oscilloscope ID is {self.osc.requestID()}')
+            print(f'Oscilloscope ID is {osc.requestID()}')
         
-        gen_connection = self.gen.connect()
+        gen_connection = gen.connect()
         if gen_connection: 
             print("Connection with the Generator is successfully set!")
 
-        self.gen.reset()
-        self.osc.reset()
+        gen.reset()
+        osc.reset()
 
-        self.gen.setSignal(t=puls_width,amp=puls_amp)
+        gen.setSignal(t=puls_width,amp=puls_amp/2,offset=puls_amp/4)
         time.sleep(1) 
         
          
-        self.osc.setup_oscilloscope_sds1000(vdiv=vdiv, tdiv=time_div, level=trig_level, time_shift=time_shift)
+        osc.setup_oscilloscope_sds1000(vdiv=vdiv, tdiv=time_div, level=trig_level, time_shift=time_shift)
         vdiv1,ofst1 = osc.getPLT_conditions(1)
         vdiv2,ofst2 = osc.getPLT_conditions(2)
         tdiv,sara = osc.getTIME_conditions()
 
        
-        self.gen.turnOn()
-        self.gen.trig()
+        gen.turnOn()
+        gen.trig()
         #time.sleep(1)
-        self.gen.turnOff()
+        gen.turnOff()
 
         #while osc.oscilloscope.query('INR?') != '1': pass
      
-        volt_value2 = self.osc.getWFdata(2,vdiv2,ofst2)
-        volt_value1 = self.osc.getWFdata(1,vdiv1,ofst1)
+        volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
+        volt_value1 = osc.getWFdata(1,vdiv1,ofst1)
         
-        time_value = self.osc.calcTIME_value(len(volt_value2),tdiv,sara)
+        time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
 
-        print("Plotting..")
-        self.osc.plotData(time_value,volt_value1,volt_value2,tdiv,trig_level,time_shift,vdiv1,filename)
-        bmpfile = filename + ".bmp"
-        self.osc.getBMP("screen.bmp")
+        # print("Plotting..")
+        # osc.plotData(time_value,volt_value1,volt_value2,tdiv,trig_level,time_shift,vdiv1,filename)
+        # bmpfile = filename + ".bmp"
 
-        self.osc.close()
-        self.gen.close()
+        bmp = osc.getBMP("screen.bmp")
+
+        osc.close()
+        gen.close()
                 
         return {
-            'time': t,
-            'signal': signal_with_noise,
-            'clean_signal': signal
+            'time': time_value,
+            'signal': volt_value2,
+            'clean_signal':volt_value1,
+            'pic':bmp
         }
     
     def update_plot(self, data, params):
+        
         """Обновляет график с новыми данными"""
         # Очищаем график
         self.ax.clear()
         
         # Обновляем данные
-        self.ax.plot(data['time'], data['signal'], 'b-', linewidth=2, label='Измеренный сигнал')
-        self.ax.plot(data['time'], data['clean_signal'], 'r--', linewidth=1, alpha=0.7, label='Идеальный сигнал')
+        self.ax.plot(data['time'], data['signal'], 'b-', color='green',markersize=2, label='CH2-T')
+        self.ax.plot(data['time'], data['clean_signal'], 'r--', color='gold',markersize=2,label='CH1-T')
         
         # Настраиваем график
         self.ax.set_title(f"Осциллограмма сигнала (Амплитуда: {params['amplitude']} В)")
-        self.ax.set_xlabel("Время, с")
-        self.ax.set_ylabel("Напряжение, В")
-        self.ax.grid(True, alpha=0.3)
+        self.ax.set_xlabel("Время t, с")
+        self.ax.set_ylabel("Напряжение U, В")
+        self.ax.grid(True, linestyle='--', alpha=0.7)
         self.ax.legend()
         
-        # # Настраиваем сетку согласно параметрам
-        # if params['time_step'] > 0:
-        #     self.ax.xaxis.set_major_locator(plt.MultipleLocator(params['time_step'] * 1e-9))
-        #
-        # if params['voltage_step'] > 0:
-        #     self.ax.yaxis.set_major_locator(plt.MultipleLocator(params['voltage_step']))
-        #
-        # # Применяем сдвиг по времени
-        # if params['time_shift'] != 0:
-        #     current_xlim = self.ax.get_xlim()
-        #     self.ax.set_xlim(current_xlim[0] + params['time_shift'] * 1e-9,
-        #                    current_xlim[1] + params['time_shift'] * 1e-9)
-
-
         # Перерисовываем график
         self.fig.tight_layout()
         self.canvas.draw()
+        return self.fig
     
-    def save_measurement(self, data, params):
+    def save_measurement(self, data, params, figure=None, bmp=None):
+        df_full = pd.DataFrame({'t': data["time"], 'u1': data["clean_signal"], 'u2': data["signal"]})
         """Сохраняет данные измерения в файл"""
         # Создаем директорию, если её нет
         os.makedirs(params['directory'], exist_ok=True)
         
         # Полный путь к файлу
-        filepath = os.path.join(params['directory'], f"{params['filename']}.txt")
-        
+        filepath = os.path.join(params['directory'], f"{params['filename']}.csv")
+
         # Сохраняем данные
         with open(filepath, 'w') as f:
             # Записываем параметры
@@ -270,12 +265,20 @@ class MeasurementApp:
                 if key not in ['directory', 'filename']:
                     f.write(f"# {key}: {value}\n")
             
-            # Записываем данные
-            f.write("\n# Время(с)\tНапряжение(В)\n")
-            for t, v in zip(data['time'], data['signal']):
-                f.write(f"{t:.9f}\t{v:.6f}\n")
-        
+        df_full.to_csv(filepath, sep='\t', index=False)
+                
         print(f"Данные сохранены в: {filepath}")
+
+        plot_filepath = os.path.join(params['directory'], f"{params['filename']}.png")
+        if figure is not None:
+            figure.savefig(plot_filepath)
+
+        bmp_filepath = os.path.join(params['directory'], f"{params['filename']}.bmp")
+        if bmp is not None:
+            f = open(bmp_filepath,'wb')
+            f.write(bmp)
+            f.flush()
+            f.close()
 
 def main():
     root = tb.Window(themename="darkly")
