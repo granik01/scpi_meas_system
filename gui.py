@@ -19,10 +19,6 @@ class MeasurementApp:
         self.root = root
         self.root.title("Измерительная система")
         self.root.geometry("1200x700")
-        # self.rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
-        # print(self.rm.list_resources())
-        # self.osc = SDS1000CFL(self.rm)
-        # self.gen = SDG800(self.rm)
     
         # Стиль ttkbootstrap
         self.style = tb.Style("darkly")
@@ -51,7 +47,7 @@ class MeasurementApp:
         self.create_labeled_entry(gen_frame, "Амплитуда имп., В:", "amplitude", "3")
         
         # Поле: Длительность импульса
-        self.create_labeled_entry(gen_frame, "Длительность имп., с:", "duration", "0.000001")
+        self.create_labeled_entry(gen_frame, "Длительность имп., с:", "duration", "0.0000006")
         
         # === Группа: Управление осциллографом ===
         osc_frame = tb.Labelframe(left_panel, text="Управление осциллографом", bootstyle=WARNING)
@@ -137,10 +133,10 @@ class MeasurementApp:
             data = self.simulate_measurement(params)
             
             # Обновляем график
-            figure = self.update_plot(data, params)
-            
-            # Сохраняем данные
-            self.save_measurement(data, params,figure)
+            if data['time']:
+                figure = self.update_plot(data, params)
+                # Сохраняем данные
+                self.save_measurement(data, params,figure,data['pic'])
             
             # Обновляем статус
             self.status_var.set(f"Измерение завершено: {datetime.now().strftime('%H:%M:%S')}")
@@ -168,57 +164,52 @@ class MeasurementApp:
         time_shift = int(params['time_shift']) #нс
         time_div = float(params['time_step']) #нс
         vdiv = float(params['voltage_step']) #В
-        
         directory = params['directory'] 
         filename = params['filename'] 
+        
         rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
         print(rm.list_resources())
-        osc = SDS1000CFL(rm)
-        gen = SDG800(rm)
 
+        osc = SDS1000CFL(rm)
         osc_connection = osc.connect()
         if osc_connection: 
             print("Connection with the Oscilloscope is successfully set!")
             print(f'Oscilloscope ID is {osc.requestID()}')
-        
+            osc.reset()
+            osc.setup_oscilloscope_sds1000(vdiv=vdiv, tdiv=time_div, level=trig_level, time_shift=time_shift)
+            vdiv1,ofst1 = osc.getPLT_conditions(1)
+            vdiv2,ofst2 = osc.getPLT_conditions(2)
+            tdiv,sara = osc.getTIME_conditions()
+            print(f'Oscilloscope was configured!')
+
+        gen = SDG800(rm)        
         gen_connection = gen.connect()
         if gen_connection: 
             print("Connection with the Generator is successfully set!")
-
         gen.reset()
-        osc.reset()
-
         gen.setSignal(t=puls_width,amp=puls_amp/2,offset=puls_amp/4)
-        time.sleep(1) 
+        #time.sleep(1)  
         
-         
-        osc.setup_oscilloscope_sds1000(vdiv=vdiv, tdiv=time_div, level=trig_level, time_shift=time_shift)
-        vdiv1,ofst1 = osc.getPLT_conditions(1)
-        vdiv2,ofst2 = osc.getPLT_conditions(2)
-        tdiv,sara = osc.getTIME_conditions()
-
-       
         gen.turnOn()
         gen.trig()
         #time.sleep(1)
         gen.turnOff()
+        gen.close()
 
         #while osc.oscilloscope.query('INR?') != '1': pass
-     
-        volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
-        volt_value1 = osc.getWFdata(1,vdiv1,ofst1)
-        
-        time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
 
-        # print("Plotting..")
-        # osc.plotData(time_value,volt_value1,volt_value2,tdiv,trig_level,time_shift,vdiv1,filename)
-        # bmpfile = filename + ".bmp"
-
-        bmp = osc.getBMP("screen.bmp")
-
-        osc.close()
-        gen.close()
-                
+        if osc_connection:
+            volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
+            volt_value1 = osc.getWFdata(1,vdiv1,ofst1)        
+            time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
+            bmp = osc.getBMP()
+            osc.close()
+        else: 
+            volt_value2 = None
+            volt_value1 = None
+            time_value = None
+            bmp = None
+            
         return {
             'time': time_value,
             'signal': volt_value2,
@@ -250,21 +241,25 @@ class MeasurementApp:
     
     def save_measurement(self, data, params, figure=None, bmp=None):
         df_full = pd.DataFrame({'t': data["time"], 'u1': data["clean_signal"], 'u2': data["signal"]})
+
         """Сохраняет данные измерения в файл"""
         # Создаем директорию, если её нет
         os.makedirs(params['directory'], exist_ok=True)
         
         # Полный путь к файлу
+        params_filepath = os.path.join(params['directory'], f"{params['filename']}_params.csv")
         filepath = os.path.join(params['directory'], f"{params['filename']}.csv")
 
         # Сохраняем данные
-        with open(filepath, 'w') as f:
+        with open(params_filepath, 'w') as f:
             # Записываем параметры
             f.write("# Параметры измерения\n")
             for key, value in params.items():
                 if key not in ['directory', 'filename']:
                     f.write(f"# {key}: {value}\n")
-            
+
+        print(f"Данные сохранены в: {params_filepath}")
+
         df_full.to_csv(filepath, sep='\t', index=False)
                 
         print(f"Данные сохранены в: {filepath}")
@@ -272,6 +267,7 @@ class MeasurementApp:
         plot_filepath = os.path.join(params['directory'], f"{params['filename']}.png")
         if figure is not None:
             figure.savefig(plot_filepath)
+        print(f"Данные сохранены в: {plot_filepath}")
 
         bmp_filepath = os.path.join(params['directory'], f"{params['filename']}.bmp")
         if bmp is not None:
@@ -279,6 +275,7 @@ class MeasurementApp:
             f.write(bmp)
             f.flush()
             f.close()
+        print(f"Данные сохранены в: {bmp_filepath}")
 
 def main():
     root = tb.Window(themename="darkly")

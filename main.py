@@ -49,8 +49,6 @@ if __name__ == "__main__":
 
     #while osc.oscilloscope.query('INR?') != '1': pass
     
-    
-    
     volt_value1 = osc.getWFdata(1,vdiv1,ofst1)
     volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
     
@@ -60,7 +58,9 @@ if __name__ == "__main__":
     osc.plotData(time_value,volt_value1,volt_value2,tdiv,trig_level,time_shift,vdiv1,filename)
     now = datetime.now()  
     string = now.strftime('%Y_%m_%d_%H_%M_%S')  
-    osc.getBMP("screen" + string + ".bmp")
+    result_str = osc.getBMP()
+    osc.saveBMP(result_str,"screen" + string + ".bmp")
+    
 
     osc.close()
     gen.close()

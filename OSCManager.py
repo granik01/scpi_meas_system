@@ -115,7 +115,7 @@ class SDS1000CFL:
         sara = self.oscilloscope.query('SARA?')
         return sara
 
-    def getBMP(self, file_name):
+    def getBMP(self):
         self.oscilloscope.write('SCDP')
         result_str = self.oscilloscope.read_raw()
         return result_str
