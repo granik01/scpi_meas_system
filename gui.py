@@ -203,6 +203,7 @@ class MeasurementApp:
             volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
             volt_value1 = osc.getWFdata(1,vdiv1,ofst1)        
             time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
+            time.sleep(1)
             bmp = osc.getBMP()
             osc.close()
         else: 
