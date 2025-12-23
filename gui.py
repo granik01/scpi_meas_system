@@ -13,6 +13,8 @@ from OSCManager import SDS1000CFL
 from GeneratorManager import SDG800
 import pyvisa
 import time
+from pathlib import Path
+from tkinter import PhotoImage
 
 class MeasurementApp:
     def __init__(self, root):
@@ -279,6 +281,9 @@ class MeasurementApp:
 
 def main():
     root = tb.Window(themename="darkly")
+    img = PhotoImage(file=Path(__file__).parent/'fav.ico')
+    root.tk.call('wm', 'iconphoto', root._w, img)
+    root.iconbitmap(Path(__file__).parent/'fav.ico')
     app = MeasurementApp(root)
     root.mainloop()
 
