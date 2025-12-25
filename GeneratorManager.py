@@ -62,7 +62,7 @@ class SDG800:
         self.generator.write(f"VOLT {str(amp)}")
         self.generator.write(f"VOLT:OFFS {str(offset)}")
             
-    def setSignal(self, waveform="PULS", freq = 10000, amp = 3.0, offset = 0, t = 0.00000005, ncycles =1):
+    def setSignal(self, waveform="PULS", freq = 10000, amp = 3.0, offset = 0.0, t = 0.00000005, ncycles =1):
         self.generator.write(f"FUNC {waveform}")
         self.setFreq(freq)
         self.setPulsWidt(t)
