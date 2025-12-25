@@ -14,7 +14,6 @@ from GeneratorManager import SDG800
 import pyvisa
 import time
 from pathlib import Path
-from tkinter import PhotoImage
 
 class MeasurementApp:
     def __init__(self, root):
@@ -204,6 +203,7 @@ class MeasurementApp:
             volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
             volt_value1 = osc.getWFdata(1,vdiv1,ofst1)        
             time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
+            time.sleep(1)
             bmp = osc.getBMP()
             osc.close()
         else: 
@@ -281,9 +281,7 @@ class MeasurementApp:
 
 def main():
     root = tb.Window(themename="darkly")
-    img = PhotoImage(file=Path(__file__).parent/'fav.ico')
-    root.tk.call('wm', 'iconphoto', root._w, img)
-    root.iconbitmap(Path(__file__).parent/'fav.ico')
+    root.iconbitmap(Path(__file__).parent/'osc.ico')
     app = MeasurementApp(root)
     root.mainloop()
 
