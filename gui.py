@@ -159,7 +159,7 @@ class MeasurementApp:
         return params
     
     def simulate_measurement(self, params):
-        trig_level = 0.1 #В
+        trig_level = 1 #В
         puls_width = float(params['duration']) #c
         puls_amp = float(params['amplitude']) #В
         time_shift = int(params['time_shift']) #нс
