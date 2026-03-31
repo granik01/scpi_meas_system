@@ -142,6 +142,24 @@ class SDS1000CFL:
                 break
         return float(tdiv),float(sara)
 
+    def filter_data(self,t,ch1,ch2,time_shift,tdiv,trig_level):
+        df1 = pd.DataFrame({'t': t, 'u1': ch1})
+        df2 = pd.DataFrame({'t': t, 'u2': ch2})
+        #df_full = pd.DataFrame({'t': t, 'u1': ch1, 'u2': ch2})
+        time_shift = time_shift*1E-9 #нс
+        tdiv = tdiv*1E-9
+        time_shift_from_zero = tdiv*18/2 - time_shift
+        filtered_df1 = df1[(df1['u1'] > trig_level)]
+        puls_start = filtered_df1['t'].min()-time_shift_from_zero
+        puls_end = filtered_df1['t'].max()
+        filtered_df1 = df1-puls_start
+        filtered_df1 = filtered_df1[(filtered_df1['t'] >= 0)&(filtered_df1['t'] <= tdiv*18)]
+        filtered_df2 = df2[(df2['t'] >= puls_start)]-puls_start
+        filtered_df2 = filtered_df2[(filtered_df2['t'] <= tdiv*18)]
+        #df_cut = pd.DataFrame({'t': filtered_df1['t'], 'u1': filtered_df1['u1'], 'u2': filtered_df2['u2']})
+        return filtered_df1["t"],filtered_df1["u1"],filtered_df2["u2"]
+
+
     def plotData(self,t,ch1,ch2,tdiv,trig_level,time_shift,vdiv,filename):
         df1 = pd.DataFrame({'t': t, 'u1': ch1})
         df2 = pd.DataFrame({'t': t, 'u2': ch2})

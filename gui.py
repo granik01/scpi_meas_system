@@ -130,12 +130,14 @@ class MeasurementApp:
             # Получаем значения из полей ввода
             params = self.get_parameters()
             
+            
             # Имитация измерения (генерируем тестовые данные)
             data = self.simulate_measurement(params)
+
             
             # Обновляем график
             if data['time']:
-                figure = self.update_plot(data, params)
+                figure = self.update_plot(data,params)
                 # Сохраняем данные
                 self.save_measurement(data, params,figure,data['pic'])
             
@@ -198,26 +200,36 @@ class MeasurementApp:
         gen.close()
 
         #while osc.oscilloscope.query('INR?') != '1': pass
+        time.sleep(1)
 
         if osc_connection:
+            print("Получение данных!")
             volt_value2 = osc.getWFdata(2,vdiv2,ofst2)
             volt_value1 = osc.getWFdata(1,vdiv1,ofst1)        
             time_value = osc.calcTIME_value(len(volt_value2),tdiv,sara)
             time.sleep(1)
             bmp = osc.getBMP()
             osc.close()
+            time_value_filtered,volt_value1_filtered,volt_value2_filtered = osc.filter_data(time_value,volt_value1,volt_value2,time_shift,time_div,trig_level)
         else: 
             volt_value2 = None
             volt_value1 = None
             time_value = None
+            volt_value2_filtered = None
+            volt_value1_filtered = None
+            time_value_filtered = None
             bmp = None
-            
+        
+
         return {
             'time': time_value,
             'signal': volt_value2,
             'clean_signal':volt_value1,
-            'pic':bmp
-        }
+            'time_filtered':time_value_filtered,
+            'signal_filtered':volt_value2_filtered,
+            'clean_signal_filtered':volt_value1_filtered,
+            'pic':bmp}
+        
     
     def update_plot(self, data, params):
         
@@ -226,8 +238,10 @@ class MeasurementApp:
         self.ax.clear()
         
         # Обновляем данные
-        self.ax.plot(data['time'], data['signal'], 'b-', color='green',markersize=2, label='CH2-T')
-        self.ax.plot(data['time'], data['clean_signal'], 'r--', color='gold',markersize=2,label='CH1-T')
+        self.ax.plot(data['time_filtered'], data['signal_filtered'], color='green',markersize=2, label='CH2-T')
+        self.ax.plot(data['time_filtered'], data['clean_signal_filtered'], color='gold',markersize=2,label='CH1-T')
+        # self.ax.plot(data['time'], data['signal'], color='green',markersize=2, label='CH2-T')
+        # self.ax.plot(data['time'], data['clean_signal'], color='gold',markersize=2,label='CH1-T')
         
         # Настраиваем график
         self.ax.set_title(f"Осциллограмма сигнала (Амплитуда: {params['amplitude']} В)")
@@ -243,7 +257,7 @@ class MeasurementApp:
     
     def save_measurement(self, data, params, figure=None, bmp=None):
         df_full = pd.DataFrame({'t': data["time"], 'u1': data["clean_signal"], 'u2': data["signal"]})
-
+        df_cut = pd.DataFrame({'tf': data["time_filtered"], 'u1f': data["clean_signal_filtered"], 'u2f': data["signal_filtered"]})
         """Сохраняет данные измерения в файл"""
         # Создаем директорию, если её нет
         os.makedirs(params['directory'], exist_ok=True)
@@ -251,6 +265,7 @@ class MeasurementApp:
         # Полный путь к файлу
         params_filepath = os.path.join(params['directory'], f"{params['filename']}_params.csv")
         filepath = os.path.join(params['directory'], f"{params['filename']}.csv")
+        filepath_cut = os.path.join(params['directory'], f"{params['filename']}_cut.csv")
 
         # Сохраняем данные
         with open(params_filepath, 'w') as f:
@@ -265,6 +280,10 @@ class MeasurementApp:
         df_full.to_csv(filepath, sep=',', index=False)
                 
         print(f"Данные сохранены в: {filepath}")
+
+        df_cut.to_csv(filepath_cut, sep=',', index=False)
+                
+        print(f"Обработанные данные сохранены в: {filepath_cut}")
 
         plot_filepath = os.path.join(params['directory'], f"{params['filename']}.png")
         if figure is not None:
