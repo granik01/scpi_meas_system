@@ -262,7 +262,7 @@ class MeasurementApp:
 
         print(f"Данные сохранены в: {params_filepath}")
 
-        df_full.to_csv(filepath, sep='\t', index=False)
+        df_full.to_csv(filepath, sep=',', index=False)
                 
         print(f"Данные сохранены в: {filepath}")
 
