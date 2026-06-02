@@ -68,6 +68,7 @@ class SDG800:
         self.setPulsWidt(t)
         #self.generator.write("PULS:TRAN 0.000000005")
         self.setAmp(amp,offset)
+        self.generator.write("INVT ON")
         self.generator.write("BURS:STAT ON")
         self.generator.write(f"BURS:NCYC {str(ncycles)}")
         self.generator.write("TRIG:SOUR BUS")
