@@ -52,6 +52,8 @@ class MeasurementApp:
 
         # Поле: Смещение
         self.create_labeled_entry(gen_frame, "Смещение, В:", "offset", "0.0")
+        # Инверсия
+        self.create_labeled_toggle(gen_frame, "Инверсия:", "invt")
         
         # === Группа: Управление осциллографом ===
         osc_frame = tb.Labelframe(left_panel, text="Управление осциллографом", bootstyle=WARNING)
@@ -105,6 +107,32 @@ class MeasurementApp:
         
         entry = tb.Entry(frame, textvariable=var, width=15)
         entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=3)
+
+    def create_labeled_toggle(self, parent, label_text, var_name, default_value=False):
+        """Создает метку и кнопку ВКЛ/ВЫКЛ"""
+
+        frame = tk.Frame(parent)
+        frame.pack(fill=tk.X, pady=2)
+
+        label = tb.Label(frame, text=label_text, width=25, anchor="w")
+        label.pack(side=tk.LEFT)
+
+        var = tk.BooleanVar(value=default_value)
+        setattr(self, f"{var_name}_var", var)
+
+        button = tb.Checkbutton(
+            frame,
+            text="ВЫКЛ",
+            variable=var,
+            bootstyle="toolbutton"
+        )
+        button.pack(side=tk.RIGHT)
+
+        def update_text(*args):
+            button.config(text="ВКЛ" if var.get() else "ВЫКЛ")
+
+        var.trace_add("write", update_text)
+        update_text()
 
     def create_labeled_combo(self, parent, label_text, var_name, default_value=""):
         """Создает метку и поле ввода"""
