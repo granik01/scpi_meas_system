@@ -49,6 +49,9 @@ class MeasurementApp:
         
         # Поле: Длительность импульса
         self.create_labeled_entry(gen_frame, "Длительность имп., с:", "duration", "0.0000006")
+
+        # Поле: Смещение
+        self.create_labeled_entry(gen_frame, "Смещение, В:", "offset", "0.0")
         
         # === Группа: Управление осциллографом ===
         osc_frame = tb.Labelframe(left_panel, text="Управление осциллографом", bootstyle=WARNING)
@@ -56,8 +59,9 @@ class MeasurementApp:
         
         # Поля осциллографа
         self.create_labeled_entry(osc_frame, "Шаг сетки по времени, нс:", "time_step", "100")
-        self.create_labeled_entry(osc_frame, "Сдвиг по времени, нс:", "time_shift", "600")
-        self.create_labeled_entry(osc_frame, "Шаг сетки по напряжению, В:", "voltage_step", "2.0")
+        self.create_labeled_entry(osc_frame, "Сдвиг t, нс:", "time_shift", "600")
+        self.create_labeled_entry(osc_frame, "Шаг сетки U, В:", "voltage_step", "2.0")
+        self.create_labeled_entry(osc_frame, "Триггер, В:", "triger_level", "1.0")
         
         # === Поля для сохранения данных ===
         save_frame = tk.Frame(left_panel)
@@ -94,13 +98,27 @@ class MeasurementApp:
         frame.pack(fill=tk.X, pady=2)
         
         label = tb.Label(frame, text=label_text, width=25, anchor="w")
-        label.pack(side=tk.LEFT)
+        label.pack(side=tk.LEFT, padx=3)
         
         var = tk.StringVar(value=default_value)
         setattr(self, f"{var_name}_var", var)
         
         entry = tb.Entry(frame, textvariable=var, width=15)
-        entry.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=3)
+
+    def create_labeled_combo(self, parent, label_text, var_name, default_value=""):
+        """Создает метку и поле ввода"""
+        frame = tk.Frame(parent)
+        frame.pack(fill=tk.X, pady=2)
+        
+        label = tb.Label(frame, text=label_text, width=25, anchor="w")
+        label.pack(side=tk.LEFT, padx=3)
+        
+        var = tk.StringVar(value=default_value)
+        setattr(self, f"{var_name}_var", var)
+        
+        entry = tb.Entry(frame, textvariable=var, width=15)
+        entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=3)
         
     def create_plot(self, parent):
         """Создает область для графика matplotlib"""
@@ -152,18 +170,21 @@ class MeasurementApp:
         params = {
             'amplitude': float(self.amplitude_var.get()),
             'duration': float(self.duration_var.get()),
+            'offset': float(self.offset_var.get()),
             'time_step': float(self.time_step_var.get()),
             'time_shift': float(self.time_shift_var.get()),
             'voltage_step': float(self.voltage_step_var.get()),
             'directory': self.directory_var.get(),
-            'filename': self.filename_var.get()
+            'filename': self.filename_var.get(),
+            'triger_level': float(self.triger_level_var.get())
         }
         return params
     
     def simulate_measurement(self, params):
-        trig_level = 1 #В
+        trig_level = float(params['triger_level']) #В
         puls_width = float(params['duration']) #c
         puls_amp = float(params['amplitude']) #В
+        offset = float(params['offset'])
         time_shift = int(params['time_shift']) #нс
         time_div = float(params['time_step']) #нс
         vdiv = float(params['voltage_step']) #В
@@ -190,7 +211,8 @@ class MeasurementApp:
         if gen_connection: 
             print("Connection with the Generator is successfully set!")
         gen.reset()
-        gen.setSignal(t=puls_width,amp=puls_amp/2,offset=puls_amp/4)
+        # gen.setSignal(t=puls_width,amp=puls_amp/2,offset=puls_amp/4)
+        gen.setSignal(t=puls_width,amp=puls_amp/2,offset=offset)
         #time.sleep(1)  
         
         gen.turnOn()
@@ -238,10 +260,10 @@ class MeasurementApp:
         self.ax.clear()
         
         # Обновляем данные
-        self.ax.plot(data['time_filtered'], data['signal_filtered'], color='green',markersize=2, label='CH2-T')
-        self.ax.plot(data['time_filtered'], data['clean_signal_filtered'], color='gold',markersize=2,label='CH1-T')
-        # self.ax.plot(data['time'], data['signal'], color='green',markersize=2, label='CH2-T')
-        # self.ax.plot(data['time'], data['clean_signal'], color='gold',markersize=2,label='CH1-T')
+        #self.ax.plot(data['time_filtered'], data['signal_filtered'], color='green',markersize=2, label='CH2-T')
+        #self.ax.plot(data['time_filtered'], data['clean_signal_filtered'], color='gold',markersize=2,label='CH1-T')
+        self.ax.plot(data['time'], data['signal'], color='green',markersize=2, label='CH2-T')
+        self.ax.plot(data['time'], data['clean_signal'], color='gold',markersize=2,label='CH1-T')
         
         # Настраиваем график
         self.ax.set_title(f"Осциллограмма сигнала (Амплитуда: {params['amplitude']} В)")

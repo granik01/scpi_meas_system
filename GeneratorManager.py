@@ -68,33 +68,43 @@ class SDG800:
         self.setPulsWidt(t)
         #self.generator.write("PULS:TRAN 0.000000005")
         self.setAmp(amp,offset)
-        self.generator.write("INVT ON")
+       
         self.generator.write("BURS:STAT ON")
         self.generator.write(f"BURS:NCYC {str(ncycles)}")
         self.generator.write("TRIG:SOUR BUS")
         
+        
     
-    def setPeriodicSignal(self, waveform="SQUARE", freq = 10000, amp = 3.0, offset = 0):
+    def setPeriodicSignal(self, waveform="SQUARE", freq = 10000, amp = 2.0, offset = 0):
         self.generator.write(f"FUNC {waveform}")
         self.generator.write(f"FREQ {str(freq)}")
         self.generator.write(f"VOLT {str(amp)}")
         self.generator.write(f"VOLT:OFFS {str(offset)}")
+        #self.generator.write(f"VOLT:INV ON")
 
     def close(self):
         self.generator.close()
 
 if __name__ == "__main__":  
-
-    gen = SDG800()
+    rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+    gen = SDG800(rm)
     gen.getDeviceList()
     gen.connect()
-    gen.reset()
-    gen.setSignal()
-    time.sleep(1)
-    gen.turnOn()
-    gen.trig()
-    time.sleep(1)
-    gen.turnOff()
+    gen.reset()  
+    print(gen.requestID())
+    # gen.generator.write("SYST:BEEP:STAT ON")     #работает
+    gen.generator.write("OUTP:POL NORM")
+
+    # gen.setSignal()
+    #gen.generator.write(f"INVT ON")
+    
+
+    # time.sleep(1)
+    # gen.turnOn()
+    # gen.trig()
+    # time.sleep(1)
+    # gen.turnOff()
+
     # gen.setPeriodicSignal()
     # time.sleep(1)
     # gen.turnOn()

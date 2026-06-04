@@ -258,8 +258,8 @@ class SDS1000CFL:
         self.oscilloscope.close()
 
 if __name__ == "__main__":  
-
-    osc = SDS1000CFL()
+    rm = pyvisa.ResourceManager('C:/WINDOWS/System32/nivisa64.dll')
+    osc = SDS1000CFL(rm)
     devicelist = osc.getDeviceList()
     print(devicelist)
 
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     
     osc.setup_oscilloscope_sds1000()
 
-    bmp = osc.getBMP("screen.bmp")
-    osc.getWFdata()
+    bmp = osc.getBMP()
+    # osc.getWFdata()
 
     osc.close()
